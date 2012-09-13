@@ -10,18 +10,18 @@
 
 #ifdef TARGET_OS_IPHONE
 #import <UIKit/UIKit.h>
+typedef UIBezierPath PS_BEZIER_PATH;
 #else
 #import <Cocoa/Cocoa.h>
+typedef NSBezierPath PS_BEZIER_PATH;
 #endif
+
+
 
 @interface PocketSVG : NSObject {
 	@private
 	float			pathScale;
-#ifdef TARGET_OS_IPHONE
-	UIBezierPath    *bezier;
-#else
-	NSBezierPath    *bezier;
-#endif
+	PS_BEZIER_PATH  *bezier;
 	CGPoint			lastPoint;
 	CGPoint			lastControlPoint;
 	BOOL			validLastControlPoint;
@@ -30,11 +30,7 @@
     
     NSMutableArray  *tokens;
 }
-#ifdef TARGET_OS_IPHONE
-@property(nonatomic, readonly) UIBezierPath *bezier;
-#else
-@property(nonatomic, readonly) NSBezierPath *bezier;
-#endif
+@property(nonatomic, readonly) PS_BEZIER_PATH *bezier;
 
 - (id)initFromSVGFileNamed:(NSString *)nameOfSVG;
 
