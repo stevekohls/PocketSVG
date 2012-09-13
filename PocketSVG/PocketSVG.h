@@ -17,19 +17,8 @@ typedef NSBezierPath PS_BEZIER_PATH;
 #endif
 
 
+@interface PocketSVG : NSObject
 
-@interface PocketSVG : NSObject {
-	@private
-	float			pathScale;
-	PS_BEZIER_PATH  *bezier;
-	CGPoint			lastPoint;
-	CGPoint			lastControlPoint;
-	BOOL			validLastControlPoint;
-	NSCharacterSet  *separatorSet;
-	NSCharacterSet  *commandSet;
-    
-    NSMutableArray  *tokens;
-}
 @property(nonatomic, readonly) PS_BEZIER_PATH *bezier;
 
 - (id)initFromSVGFileNamed:(NSString *)nameOfSVG;

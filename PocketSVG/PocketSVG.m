@@ -20,6 +20,7 @@ NSString* const commandCharString	= @"CcMmLlHhVvZzqQaAsS";
 unichar const invalidCommand		= '*';
 
 
+#pragma mark - Token class interface
 
 @interface Token : NSObject {
 	@private
@@ -34,6 +35,8 @@ unichar const invalidCommand		= '*';
 @property(nonatomic, assign) unichar command;
 @end
 
+
+#pragma mark - Token class implementation
 
 @implementation Token
 
@@ -65,7 +68,19 @@ unichar const invalidCommand		= '*';
 @end
 
 
+#pragma mark - PocketSVG class private interface
+
 @interface PocketSVG ()
+{
+    float			pathScale;
+    PS_BEZIER_PATH  *bezier;
+    CGPoint			lastPoint;
+    CGPoint			lastControlPoint;
+    BOOL			validLastControlPoint;
+    NSCharacterSet  *separatorSet;
+    NSCharacterSet  *commandSet;
+    NSMutableArray  *tokens;
+}
 
 - (NSMutableArray *)parsePath:(NSString *)attr;
 - (PS_BEZIER_PATH *) generateBezier:(NSArray *)tokens;
@@ -78,6 +93,8 @@ unichar const invalidCommand		= '*';
 
 @end
 
+
+#pragma mark - PocketSVG class implementation
 
 @implementation PocketSVG
 
