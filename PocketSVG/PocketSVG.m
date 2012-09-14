@@ -82,6 +82,8 @@ unichar   const invalidCommand      = '*';
     NSMutableArray  *_tokens;
 }
 
+- (NSString *) parseSVGFile: (NSString *) filename;
+
 - (NSMutableArray *)parsePath:(NSString *)attr;
 - (PS_BEZIER_PATH *)generateBezier:(NSArray *)tokens;
 
@@ -101,18 +103,34 @@ unichar   const invalidCommand      = '*';
 @synthesize bezier = _bezier;
 
 
-- (id)initFromSVGFileNamed:(NSString *)nameOfSVG
+#pragma mark - initialization
+
+- (id) initFromSVGFile: (NSString *) filename
 {
-    NSString *dAttribute = [self parseSVGNamed:nameOfSVG];
-    return [self initFromSVGPathNodeDAttr: dAttribute];
+    self = [super init];
+    if (self) {
+		_pathScale = 0;
+		_separatorSet = [NSCharacterSet characterSetWithCharactersInString:kSeparatorCharString];
+		_commandSet = [NSCharacterSet characterSetWithCharactersInString:kCommandCharString];
+        [self reset];
+        
+        NSString *dAttribute = [self parseSVGFile: filename];
+        
+        _tokens = [self parsePath:dAttribute];
+		_bezier = [self generateBezier:_tokens];
+    }
+    return self;
 }
+
+
+#pragma mark - parsing
 
 /********
  Returns the content of the SVG's d attribute as an NSString
 */
--(NSString *)parseSVGNamed:(NSString *)nameOfSVG{
-    
-    RXMLElement *rootXML = [RXMLElement elementFromXMLFilename: nameOfSVG fileExtension: @"svg"];
+- (NSString *) parseSVGFile: (NSString *) filename
+{    
+    RXMLElement *rootXML = [RXMLElement elementFromXMLFilename: filename fileExtension: @"svg"];
 
     if (rootXML == nil)
     {
@@ -148,22 +166,6 @@ unichar   const invalidCommand      = '*';
     //NSLog(@"*** PocketSVG: Path data of %@ is: %@", nameOfSVG, dString);
     
     return dString;
-    
-}
-
-
-- (id)initFromSVGPathNodeDAttr:(NSString *)attr
-{
-	self = [super init];
-	if (self) {
-		_pathScale = 0;
-		[self reset];
-		_separatorSet = [NSCharacterSet characterSetWithCharactersInString:kSeparatorCharString];
-		_commandSet   = [NSCharacterSet characterSetWithCharactersInString:kCommandCharString];
-		_tokens = [self parsePath:attr];
-		_bezier = [self generateBezier:_tokens];
-	}
-	return self;
 }
 
 

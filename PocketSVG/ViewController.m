@@ -18,7 +18,7 @@
     [super viewDidLoad];
         
     //1: Create a PocketSVG object from your SVG file:
-    PocketSVG *myBezier = [[PocketSVG alloc] initFromSVGFileNamed:@"BezierCurve1-iPad"];
+    PocketSVG *myBezier = [[PocketSVG alloc] initFromSVGFile:@"BezierCurve1-iPad"];
     
     
     //2: Its bezier property is the corresponding UIBezierPath:
