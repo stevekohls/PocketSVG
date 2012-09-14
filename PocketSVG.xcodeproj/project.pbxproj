@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AA7FDEAC1602B9AD006EBEFD /* RXMLElement.m in Sources */ = {isa = PBXBuildFile; fileRef = AA7FDEAB1602B9AD006EBEFD /* RXMLElement.m */; };
+		AA7FDEAE1602BEA9006EBEFD /* libz.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AA7FDEAD1602BEA9006EBEFD /* libz.dylib */; };
+		AA7FDEB01602BEB6006EBEFD /* libxml2.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AA7FDEAF1602BEB6006EBEFD /* libxml2.dylib */; };
 		B08C81DA15CC468100D15B81 /* BezierCurve1-iPad.svg in Resources */ = {isa = PBXBuildFile; fileRef = B08C81D915CC468100D15B81 /* BezierCurve1-iPad.svg */; };
 		B0A9DB9115CA9B340095DFAF /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B0A9DB9015CA9B340095DFAF /* UIKit.framework */; };
 		B0A9DB9315CA9B340095DFAF /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = B0A9DB9215CA9B340095DFAF /* Foundation.framework */; };
@@ -24,6 +27,10 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		AA7FDEAA1602B9AD006EBEFD /* RXMLElement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RXMLElement.h; sourceTree = "<group>"; };
+		AA7FDEAB1602B9AD006EBEFD /* RXMLElement.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = RXMLElement.m; sourceTree = "<group>"; };
+		AA7FDEAD1602BEA9006EBEFD /* libz.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libz.dylib; path = usr/lib/libz.dylib; sourceTree = SDKROOT; };
+		AA7FDEAF1602BEB6006EBEFD /* libxml2.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libxml2.dylib; path = usr/lib/libxml2.dylib; sourceTree = SDKROOT; };
 		B08C81D915CC468100D15B81 /* BezierCurve1-iPad.svg */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = "BezierCurve1-iPad.svg"; sourceTree = "<group>"; };
 		B0A9DB8C15CA9B340095DFAF /* PocketSVG.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PocketSVG.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		B0A9DB9015CA9B340095DFAF /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
@@ -51,6 +58,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA7FDEB01602BEB6006EBEFD /* libxml2.dylib in Frameworks */,
+				AA7FDEAE1602BEA9006EBEFD /* libz.dylib in Frameworks */,
 				B0A9DBC415CAA2380095DFAF /* QuartzCore.framework in Frameworks */,
 				B0A9DB9115CA9B340095DFAF /* UIKit.framework in Frameworks */,
 				B0A9DB9315CA9B340095DFAF /* Foundation.framework in Frameworks */,
@@ -61,6 +70,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		AA7FDEA91602B9AD006EBEFD /* RaptureXML */ = {
+			isa = PBXGroup;
+			children = (
+				AA7FDEAA1602B9AD006EBEFD /* RXMLElement.h */,
+				AA7FDEAB1602B9AD006EBEFD /* RXMLElement.m */,
+			);
+			name = RaptureXML;
+			path = PocketSVG/RaptureXML;
+			sourceTree = "<group>";
+		};
 		B0A9DB8115CA9B340095DFAF = {
 			isa = PBXGroup;
 			children = (
@@ -68,6 +87,7 @@
 				B08C81D915CC468100D15B81 /* BezierCurve1-iPad.svg */,
 				B0ABB61F15CC70B7001C9177 /* BezierCurve2-iPad.svg */,
 				B0A9DB9615CA9B340095DFAF /* PocketSVG */,
+				AA7FDEA91602B9AD006EBEFD /* RaptureXML */,
 				B0A9DB8F15CA9B340095DFAF /* Frameworks */,
 				B0A9DB8D15CA9B340095DFAF /* Products */,
 			);
@@ -111,6 +131,8 @@
 		B0A9DB9715CA9B340095DFAF /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				AA7FDEAF1602BEB6006EBEFD /* libxml2.dylib */,
+				AA7FDEAD1602BEA9006EBEFD /* libz.dylib */,
 				B0A9DB9815CA9B340095DFAF /* PocketSVG-Info.plist */,
 				B0A9DB9915CA9B340095DFAF /* InfoPlist.strings */,
 				B0A9DB9C15CA9B340095DFAF /* main.m */,
@@ -189,6 +211,7 @@
 				B0A9DBA115CA9B340095DFAF /* AppDelegate.m in Sources */,
 				B0A9DBAA15CA9B340095DFAF /* ViewController.m in Sources */,
 				B0A9DBC115CA9F370095DFAF /* PocketSVG.m in Sources */,
+				AA7FDEAC1602B9AD006EBEFD /* RXMLElement.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -274,6 +297,7 @@
 			buildSettings = {
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "PocketSVG/PocketSVG-Prefix.pch";
+				HEADER_SEARCH_PATHS = "$(SDK_DIR)\"/usr/include/libxml2";
 				INFOPLIST_FILE = "PocketSVG/PocketSVG-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -285,6 +309,7 @@
 			buildSettings = {
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "PocketSVG/PocketSVG-Prefix.pch";
+				HEADER_SEARCH_PATHS = "$(SDK_DIR)\"/usr/include/libxml2";
 				INFOPLIST_FILE = "PocketSVG/PocketSVG-Info.plist";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;

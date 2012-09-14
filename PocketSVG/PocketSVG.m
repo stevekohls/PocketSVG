@@ -11,6 +11,7 @@
 //
 
 #import "PocketSVG.h"
+#import "RXMLElement.h"
 
 NSInteger const kMaxPathComplexity  = 1000;
 NSInteger const kMaxParameters      = 64;
@@ -100,8 +101,10 @@ unichar   const invalidCommand      = '*';
 @synthesize bezier = _bezier;
 
 
-- (id)initFromSVGFileNamed:(NSString *)nameOfSVG{
-    return [self initFromSVGPathNodeDAttr:[self parseSVGNamed:nameOfSVG]];
+- (id)initFromSVGFileNamed:(NSString *)nameOfSVG
+{
+    NSString *dAttribute = [self parseSVGNamed:nameOfSVG];
+    return [self initFromSVGPathNodeDAttr: dAttribute];
 }
 
 /********
@@ -109,40 +112,34 @@ unichar   const invalidCommand      = '*';
 */
 -(NSString *)parseSVGNamed:(NSString *)nameOfSVG{
     
-    NSString *pathOfSVGFile = [[NSBundle mainBundle] pathForResource:nameOfSVG ofType:@"svg"];
-    
-    if(pathOfSVGFile == nil){
-        NSLog(@"*** PocketSVG Error: No SVG file named \"%@\".", nameOfSVG);
-        return nil;
+    RXMLElement *rootXML = [RXMLElement elementFromXMLFilename: nameOfSVG fileExtension: @"svg"];
+
+    if (rootXML == nil)
+    {
+        NSLog(@"*** PocketSVG Error: Root element nil");
+        exit(EXIT_FAILURE);
+    }
+    if (![rootXML.tag isEqualToString: @"svg"])
+    {
+        NSLog(@"*** PocketSVG Error: Root element not equal to \"svg\", instead %@:", rootXML.tag);
+        exit(EXIT_FAILURE);
+    }
+
+    // find the first <path> element
+    RXMLElement *pathElement = [rootXML child: @"path"];
+    if (pathElement == nil)
+    {
+        NSLog(@"*** PocketSVG Error: No <path> elements found");
+        exit(EXIT_FAILURE);
     }
     
-    NSError *error = nil;
-    NSString *mySVGString = [[NSString alloc] initWithContentsOfFile:pathOfSVGFile encoding:NSStringEncodingConversionExternalRepresentation error:&error];
-    
-    if(error != nil){
-        NSLog(@"*** PocketSVG Error: Couldn't read contents of SVG file named %@:", nameOfSVG);
-        NSLog(@"%@", error);
-        return nil;
+    NSString *dString = [pathElement attribute: @"d"];
+    if (dString == nil)
+    {
+        NSLog(@"*** PocketSVG Error: No \"d\" attribute found");
+        exit(EXIT_FAILURE);
     }
-    
-    //Uncomment the two lines below to print the raw data of the SVG file:
-    //NSLog(@"*** PocketSVG: Raw SVG data of %@:", nameOfSVG);
-    //NSLog(@"%@", mySVGString);
-    
-    mySVGString = [mySVGString stringByReplacingOccurrencesOfString:@"id=" withString:@""];
-    
-    NSArray *components = [mySVGString componentsSeparatedByString:@"d="];
-    
-    if([components count] < 2){
-        NSLog(@"*** PocketSVG Error: No d attribute found in SVG file.");
-        return nil;
-    }
-    
-    NSString *dString = [components lastObject];
-    dString = [dString substringFromIndex:1];
-    NSRange d = [dString rangeOfString:@"\""];    
-    dString = [dString substringToIndex:d.location];
-        
+
     NSArray *dStringWithPossibleWhiteSpace = [dString componentsSeparatedByCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
     
     dString = [dStringWithPossibleWhiteSpace componentsJoinedByString:@""];
