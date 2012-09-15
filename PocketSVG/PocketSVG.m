@@ -13,13 +13,6 @@
 #import "PocketSVG.h"
 #import "RXMLElement.h"
 
-NSInteger const kMaxPathComplexity  = 1000;
-NSInteger const kMaxParameters      = 64;
-NSInteger const kMaxTokenLength	    = 64;
-NSString* const kSeparatorCharString = @"-,CcMmLlHhVvZzqQaAsS";
-NSString* const kCommandCharString   = @"CcMmLlHhVvZzqQaAsS";
-unichar   const invalidCommand      = '*';
-
 
 #pragma mark - Token class interface
 
@@ -48,7 +41,7 @@ unichar   const invalidCommand      = '*';
 	self = [self init];
     if (self) {
 		_command = commandChar;
-		_values = [[NSMutableArray alloc] initWithCapacity:kMaxParameters];
+		_values = [[NSMutableArray alloc] init];
 	}
 	return self;
 }
@@ -86,7 +79,7 @@ unichar   const invalidCommand      = '*';
 - (NSArray *) strokesFromXML: (RXMLElement *) root;
 - (BEZIER_PATH_TYPE *) bezierFromPathElement: (RXMLElement *) pathElement;
 - (NSMutableArray *)parsePath:(NSString *)attr;
-- (BEZIER_PATH_TYPE *)generateBezier:(NSArray *)tokens;
+- (BEZIER_PATH_TYPE *) generateBezierFromTokens: (NSArray *) tokens;
 
 - (void)appendSVGMCommand:(Token *)token toBezier: (BEZIER_PATH_TYPE *) bezier;
 - (void)appendSVGLCommand:(Token *)token toBezier: (BEZIER_PATH_TYPE *) bezier;
@@ -97,6 +90,8 @@ unichar   const invalidCommand      = '*';
 
 
 #pragma mark - PocketSVG class implementation
+
+NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
 
 @implementation PocketSVG
 
@@ -112,7 +107,6 @@ unichar   const invalidCommand      = '*';
     self = [super init];
     if (self)
     {
-		_separatorSet = [NSCharacterSet characterSetWithCharactersInString:kSeparatorCharString];
 		_commandSet = [NSCharacterSet characterSetWithCharactersInString:kCommandCharString];
         [self reset];
         
@@ -215,101 +209,123 @@ unichar   const invalidCommand      = '*';
 }
 
 
-#pragma mark - Private methods
-
-/*
-	Tokenise pseudocode, used in parsePath below
-
-	start a token
-	eat a character
-	while more characters to eat
-		add character to token
-		while in a token and more characters to eat
-			eat character
-			add character to token
-		add completed token to store
-		start a new token
-	throw away empty token
-*/
+#pragma mark - parse path and create a bezier curve
 
 - (BEZIER_PATH_TYPE *) bezierFromPathElement: (RXMLElement *) pathElement
 {
     NSString *pathString = [pathElement attribute: @"d"];
     NSArray *tokens = [self parsePath: pathString];
-    BEZIER_PATH_TYPE *bezier = [self generateBezier: tokens];
+    BEZIER_PATH_TYPE *bezier = [self generateBezierFromTokens: tokens];
     
     return bezier;
 }
 
 - (NSMutableArray *)parsePath:(NSString *)attr
 {
-	NSMutableArray *stringTokens = [NSMutableArray arrayWithCapacity: kMaxPathComplexity];
-	
-	NSInteger index = 0;
-	while (index < [attr length]) {
-		NSMutableString *stringToken = [[NSMutableString alloc] initWithCapacity:kMaxTokenLength];
-		[stringToken setString:@""];
-		unichar	charAtIndex = [attr characterAtIndex:index];
-		if (charAtIndex != ',') {
-			[stringToken appendString:[NSString stringWithFormat:@"%c", charAtIndex]];
-		}
-		if (![_commandSet characterIsMember:charAtIndex] && charAtIndex != ',') {
-			while ( (++index < [attr length]) && ![_separatorSet characterIsMember:(charAtIndex = [attr characterAtIndex:index])] ) {
-				[stringToken appendString:[NSString stringWithFormat:@"%c", charAtIndex]];
-			}
-		}
-		else {
-			index++;
-		}
-		if ([stringToken length]) {
-			[stringTokens addObject:stringToken];
-		}
-	}
-	
-	if ([stringTokens count] == 0) {
+    NSLog(@"attributes: %@", attr);
+    
+    // replace all non-space whitespace and commas with space
+    NSError *error = NULL;
+    NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern: @"([\t\r\n\f,])" 
+                                                                           options: NSRegularExpressionCaseInsensitive | NSRegularExpressionDotMatchesLineSeparators
+                                                                             error: &error];
+    NSString *newAttr = [regex stringByReplacingMatchesInString: attr
+                                                        options: 0
+                                                          range: NSMakeRange(0, [attr length])
+                                                   withTemplate: @" "];
+    
+    // replace all minus signs with space and minus sign
+    NSRegularExpression *minusRegex = [NSRegularExpression regularExpressionWithPattern: @"(.)-" 
+                                                                                options: NSRegularExpressionCaseInsensitive
+                                                                                  error: &error];    
+    newAttr = [minusRegex stringByReplacingMatchesInString: newAttr
+                                                   options: 0
+                                                     range: NSMakeRange(0, [attr length])
+                                              withTemplate: @"$1 -"];
+    
+    // match command followed by numbers and spaces
+    NSRegularExpression *stringTokenRegex = [NSRegularExpression regularExpressionWithPattern: @"([A-Za-z][0-9-. ]+)"
+                                                                                      options: NSRegularExpressionCaseInsensitive 
+                                                                                        error: &error];
+    NSArray *matches = [stringTokenRegex matchesInString: newAttr
+                                                 options: 0
+                                                   range: NSMakeRange(0, [newAttr length])];
+    
+	if ([matches count] == 0) {
 		NSLog(@"*** PocketSVG Error: Path string is empty of tokens");
-		return nil;
+		exit(EXIT_FAILURE);
 	}
-	
+    
+    // get the matching strings
+    NSMutableArray *stringTokens = [NSMutableArray arrayWithCapacity: [matches count]];
+    for (NSTextCheckingResult *match in matches) {
+        NSString *result = [newAttr substringWithRange: match.range];
+        [stringTokens addObject: result];
+    }
+    
+    NSLog(@"tokens:");
+    for (NSString *string in stringTokens)
+    {
+        NSLog(@"%@", string);
+    }
+
 	// turn the stringTokens array into Tokens, checking validity of tokens as we go
-	_tokens = [[NSMutableArray alloc] initWithCapacity:kMaxPathComplexity];
-	index = 0;
-	NSString *stringToken = [stringTokens objectAtIndex:index];
-	unichar command = [stringToken characterAtIndex:0];
-	while (index < [stringTokens count]) {
+	NSMutableArray *tokens = [[NSMutableArray alloc] init];
+    
+    for (NSString *stringToken in stringTokens)
+    {
+        NSLog(@"parsing: %@", stringToken);
+        
+        unichar command = [stringToken characterAtIndex:0];
 		if (![_commandSet characterIsMember:command]) {
-			NSLog(@"*** PocketSVG Error: Path string parse error: found float where expecting command at token %d in path %s.", 
-					index, [attr cStringUsingEncoding:NSUTF8StringEncoding]);
-			return nil;
+			NSLog(@"*** PocketSVG Error: unexpected command %c", command);
+            exit(EXIT_FAILURE);
 		}
-		Token *token = [[Token alloc] initWithCommand:command];
-		
-		// There can be any number of floats after a command. Suck them in until the next command.
-		while ((++index < [stringTokens count]) && ![_commandSet characterIsMember:
-				(command = [(stringToken = [stringTokens objectAtIndex:index]) characterAtIndex:0])]) {
-			
-			NSScanner *floatScanner = [NSScanner scannerWithString:stringToken];
+        
+        NSString *parameterString = [stringToken substringFromIndex: 1];
+        NSArray *parameters = [parameterString componentsSeparatedByString: @" "];
+        
+        if ([parameters count] == 0) {
+            NSLog(@"*** PocketSVG Error: no parameters for command %c", command);
+            exit(EXIT_FAILURE);
+        }
+        
+        Token *token = [[Token alloc] initWithCommand:command];
+        
+        NSLog(@"command: %c", command);
+        
+        for (NSString *parameterString in parameters)
+        {
+            // skip if there was more than one space in a row
+            if ([parameterString length] == 0) {
+                continue;
+            }
+            
+			NSScanner *floatScanner = [NSScanner scannerWithString: parameterString];
 			float value;
 			if (![floatScanner scanFloat:&value]) {
-				NSLog(@"*** PocketSVG Error: Path string parse error: expected float or command at token %d (but found %s) in path %s.", 
-					  index, [stringToken cStringUsingEncoding:NSUTF8StringEncoding], [attr cStringUsingEncoding:NSUTF8StringEncoding]);
-				return nil;
+				NSLog(@"*** PocketSVG Error: Path string parse error: expected float (but found %@).", parameterString);
+                exit(EXIT_FAILURE);
 			}
+            
+            NSLog(@"parameter: %f", value);
+            
 			[token addValue:value];
-		}
-		
+        }
+        
 		// now we've reached a command or the end of the stringTokens array
-		[_tokens addObject:token];
-	}
-	return _tokens;
+		[tokens	addObject:token];
+    }
+    
+	return [tokens copy];
 }
 
-- (BEZIER_PATH_TYPE *)generateBezier:(NSArray *)inTokens
+- (BEZIER_PATH_TYPE *) generateBezierFromTokens: (NSArray *) tokens
 {
     BEZIER_PATH_TYPE *bezier = [[BEZIER_PATH_TYPE alloc] init];
     
 	[self reset];
-	for (Token *thisToken in inTokens) {
+	for (Token *thisToken in tokens) {
 		unichar command = [thisToken command];
 		switch (command) {
 			case 'M':
