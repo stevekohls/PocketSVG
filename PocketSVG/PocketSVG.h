@@ -20,6 +20,8 @@ typedef NSBezierPath BEZIER_PATH_TYPE;
 
 @interface PocketSVG : NSObject
 
+@property (nonatomic, readonly) CGFloat width;
+@property (nonatomic, readonly) CGFloat height;
 @property (nonatomic, readonly) NSArray *beziers;
 
 - (id) initFromSVGFile: (NSString *) filename;

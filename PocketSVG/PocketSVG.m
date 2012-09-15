@@ -100,6 +100,8 @@ unichar   const invalidCommand      = '*';
 
 @implementation PocketSVG
 
+@synthesize width  = _width;
+@synthesize height = _height;
 @synthesize beziers = _beziers;
 
 
@@ -145,6 +147,23 @@ unichar   const invalidCommand      = '*';
         exit(EXIT_FAILURE);
     }
 
+    // get the width and height
+    NSString *widthString = [rootXML attribute: @"width"];
+    NSString *heightString = [rootXML attribute: @"height"];
+    if (widthString == nil)
+    {
+        NSLog(@"width empty");
+        exit(EXIT_FAILURE);
+    }    
+    if (heightString == nil)
+    {
+        NSLog(@"height empty");
+        exit(EXIT_FAILURE);
+    }
+    
+    _width = [widthString floatValue];
+    _height = [heightString floatValue];
+    
     // find the <path> elements
     NSArray *strokeElements = [self strokesFromXML: rootXML];
     
