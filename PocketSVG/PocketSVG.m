@@ -72,14 +72,15 @@ unichar   const invalidCommand      = '*';
 
 @interface PocketSVG ()
 {
-    float			 _pathScale;
-    CGPoint			 _lastPoint;
-    CGPoint			 _lastControlPoint;
-    BOOL			 _validLastControlPoint;
-    NSCharacterSet   *_separatorSet;
-    NSCharacterSet   *_commandSet;
-    NSMutableArray   *_tokens;
+    CGPoint        _lastPoint;
+    CGPoint        _lastControlPoint;
+    BOOL           _validLastControlPoint;
+    NSCharacterSet *_separatorSet;
+    NSCharacterSet *_commandSet;
+    NSMutableArray *_tokens;
 }
+
+- (void)reset;
 
 - (void) parseSVGFile: (NSString *) filename;
 - (NSArray *) strokesFromXML: (RXMLElement *) root;
@@ -87,7 +88,6 @@ unichar   const invalidCommand      = '*';
 - (NSMutableArray *)parsePath:(NSString *)attr;
 - (BEZIER_PATH_TYPE *)generateBezier:(NSArray *)tokens;
 
-- (void)reset;
 - (void)appendSVGMCommand:(Token *)token toBezier: (BEZIER_PATH_TYPE *) bezier;
 - (void)appendSVGLCommand:(Token *)token toBezier: (BEZIER_PATH_TYPE *) bezier;
 - (void)appendSVGCCommand:(Token *)token toBezier: (BEZIER_PATH_TYPE *) bezier;
@@ -108,8 +108,8 @@ unichar   const invalidCommand      = '*';
 - (id) initFromSVGFile: (NSString *) filename
 {
     self = [super init];
-    if (self) {
-		_pathScale = 0;
+    if (self)
+    {
 		_separatorSet = [NSCharacterSet characterSetWithCharactersInString:kSeparatorCharString];
 		_commandSet = [NSCharacterSet characterSetWithCharactersInString:kCommandCharString];
         [self reset];
@@ -117,6 +117,13 @@ unichar   const invalidCommand      = '*';
         [self parseSVGFile: filename];
     }
     return self;
+}
+
+// get ready to parse another path
+- (void) reset
+{
+    _lastPoint = CGPointMake(0, 0);
+    _validLastControlPoint = NO;
 }
 
 
@@ -188,6 +195,7 @@ unichar   const invalidCommand      = '*';
     return [strokeElements copy];
 }
 
+
 #pragma mark - Private methods
 
 /*
@@ -209,7 +217,7 @@ unichar   const invalidCommand      = '*';
 {
     NSString *pathString = [pathElement attribute: @"d"];
     NSArray *tokens = [self parsePath: pathString];
-    BEZIER_PATH_TYPE *bezier = [self generateBezier:tokens];
+    BEZIER_PATH_TYPE *bezier = [self generateBezier: tokens];
     
     return bezier;
 }
@@ -268,15 +276,12 @@ unichar   const invalidCommand      = '*';
 					  index, [stringToken cStringUsingEncoding:NSUTF8StringEncoding], [attr cStringUsingEncoding:NSUTF8StringEncoding]);
 				return nil;
 			}
-			// Maintain scale.
-			_pathScale = (abs(value) > _pathScale) ? abs(value) : _pathScale;
 			[token addValue:value];
 		}
 		
 		// now we've reached a command or the end of the stringTokens array
-		[_tokens	addObject:token];
+		[_tokens addObject:token];
 	}
-	//[stringTokens release];
 	return _tokens;
 }
 
@@ -318,12 +323,6 @@ unichar   const invalidCommand      = '*';
 		}
 	}
 	return bezier;
-}
-
-- (void)reset
-{
-	_lastPoint = CGPointMake(0, 0);
-	_validLastControlPoint = NO;
 }
 
 
@@ -460,18 +459,5 @@ unichar   const invalidCommand      = '*';
 		NSLog(@"*** PocketSVG Error: Insufficient parameters for S command");
 	}
 }
-
-//- (CGPoint)bezierPoint:(CGPoint)svgPoint
-//{
-//	CGPoint newPoint;
-//    
-// 	CGFloat scaleX = viewBox.size.width / _pathScale;
-//	CGFloat scaleY = viewBox.size.height / _pathScale;
-//
-//    newPoint.x = (svgPoint.x * scaleX) + viewBox.origin.x;
-//    newPoint.y = (svgPoint.y * scaleY) + viewBox.origin.y;
-//	return svgPoint;
-//}
-
 
 @end
