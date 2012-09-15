@@ -72,20 +72,20 @@ unichar   const invalidCommand      = '*';
 
 @interface PocketSVG ()
 {
-    float			_pathScale;
-    PS_BEZIER_PATH  *_bezier;
-    CGPoint			_lastPoint;
-    CGPoint			_lastControlPoint;
-    BOOL			_validLastControlPoint;
-    NSCharacterSet  *_separatorSet;
-    NSCharacterSet  *_commandSet;
-    NSMutableArray  *_tokens;
+    float			 _pathScale;
+    BEZIER_PATH_TYPE *_bezier;
+    CGPoint			 _lastPoint;
+    CGPoint			 _lastControlPoint;
+    BOOL			 _validLastControlPoint;
+    NSCharacterSet   *_separatorSet;
+    NSCharacterSet   *_commandSet;
+    NSMutableArray   *_tokens;
 }
 
 - (NSString *) parseSVGFile: (NSString *) filename;
 
 - (NSMutableArray *)parsePath:(NSString *)attr;
-- (PS_BEZIER_PATH *)generateBezier:(NSArray *)tokens;
+- (BEZIER_PATH_TYPE *)generateBezier:(NSArray *)tokens;
 
 - (void)reset;
 - (void)appendSVGMCommand:(Token *)token;
@@ -252,9 +252,9 @@ unichar   const invalidCommand      = '*';
 	return _tokens;
 }
 
-- (PS_BEZIER_PATH *)generateBezier:(NSArray *)inTokens
+- (BEZIER_PATH_TYPE *)generateBezier:(NSArray *)inTokens
 {
-	_bezier = [[PS_BEZIER_PATH alloc] init];
+	_bezier = [[BEZIER_PATH_TYPE alloc] init];
 	[self reset];
 	for (Token *thisToken in inTokens) {
 		unichar command = [thisToken command];

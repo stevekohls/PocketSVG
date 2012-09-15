@@ -10,17 +10,17 @@
 
 #ifdef TARGET_OS_IPHONE
 #import <UIKit/UIKit.h>
-typedef UIBezierPath PS_BEZIER_PATH;
+typedef UIBezierPath BEZIER_PATH_TYPE;
 #else
 #import <Cocoa/Cocoa.h>
-typedef NSBezierPath PS_BEZIER_PATH;
+typedef NSBezierPath BEZIER_PATH_TYPE;
 #endif
 
 #import "RXMLElement.h"
 
 @interface PocketSVG : NSObject
 
-@property(nonatomic, readonly) PS_BEZIER_PATH *bezier;
+@property(nonatomic, readonly) BEZIER_PATH_TYPE *bezier;
 
 - (id) initFromSVGFile: (NSString *) filename;
 
