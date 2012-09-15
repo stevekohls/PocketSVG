@@ -22,7 +22,8 @@
     
     
     //2: Its bezier property is the corresponding UIBezierPath:
-    UIBezierPath *myPath = myBezier.bezier;
+    NSArray *beziers = myBezier.beziers;
+    UIBezierPath *myPath = [beziers objectAtIndex: 0];
     
     
     //3: To display it on screen, create a CAShapeLayer and set 

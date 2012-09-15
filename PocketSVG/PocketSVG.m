@@ -73,7 +73,6 @@ unichar   const invalidCommand      = '*';
 @interface PocketSVG ()
 {
     float			 _pathScale;
-    BEZIER_PATH_TYPE *_bezier;
     CGPoint			 _lastPoint;
     CGPoint			 _lastControlPoint;
     BOOL			 _validLastControlPoint;
@@ -82,16 +81,17 @@ unichar   const invalidCommand      = '*';
     NSMutableArray   *_tokens;
 }
 
-- (NSString *) parseSVGFile: (NSString *) filename;
-
+- (void) parseSVGFile: (NSString *) filename;
+- (NSArray *) strokesFromXML: (RXMLElement *) root;
+- (BEZIER_PATH_TYPE *) bezierFromPathElement: (RXMLElement *) pathElement;
 - (NSMutableArray *)parsePath:(NSString *)attr;
 - (BEZIER_PATH_TYPE *)generateBezier:(NSArray *)tokens;
 
 - (void)reset;
-- (void)appendSVGMCommand:(Token *)token;
-- (void)appendSVGLCommand:(Token *)token;
-- (void)appendSVGCCommand:(Token *)token;
-- (void)appendSVGSCommand:(Token *)token;
+- (void)appendSVGMCommand:(Token *)token toBezier: (BEZIER_PATH_TYPE *) bezier;
+- (void)appendSVGLCommand:(Token *)token toBezier: (BEZIER_PATH_TYPE *) bezier;
+- (void)appendSVGCCommand:(Token *)token toBezier: (BEZIER_PATH_TYPE *) bezier;
+- (void)appendSVGSCommand:(Token *)token toBezier: (BEZIER_PATH_TYPE *) bezier;
 
 @end
 
@@ -100,7 +100,7 @@ unichar   const invalidCommand      = '*';
 
 @implementation PocketSVG
 
-@synthesize bezier = _bezier;
+@synthesize beziers = _beziers;
 
 
 #pragma mark - initialization
@@ -114,10 +114,7 @@ unichar   const invalidCommand      = '*';
 		_commandSet = [NSCharacterSet characterSetWithCharactersInString:kCommandCharString];
         [self reset];
         
-        NSString *dAttribute = [self parseSVGFile: filename];
-        
-        _tokens = [self parsePath:dAttribute];
-		_bezier = [self generateBezier:_tokens];
+        [self parseSVGFile: filename];
     }
     return self;
 }
@@ -125,10 +122,8 @@ unichar   const invalidCommand      = '*';
 
 #pragma mark - parsing
 
-/********
- Returns the content of the SVG's d attribute as an NSString
-*/
-- (NSString *) parseSVGFile: (NSString *) filename
+// parse the SVG file into a Bezier curve
+- (void) parseSVGFile: (NSString *) filename
 {    
     RXMLElement *rootXML = [RXMLElement elementFromXMLFilename: filename fileExtension: @"svg"];
 
@@ -143,31 +138,55 @@ unichar   const invalidCommand      = '*';
         exit(EXIT_FAILURE);
     }
 
-    // find the first <path> element
-    RXMLElement *pathElement = [rootXML child: @"path"];
-    if (pathElement == nil)
+    // find the <path> elements
+    NSArray *strokeElements = [self strokesFromXML: rootXML];
+    
+    // build the paths
+    NSMutableArray *paths = [NSMutableArray arrayWithCapacity: [strokeElements count]];
+    
+    for (RXMLElement *strokeElement in strokeElements)
     {
-        NSLog(@"*** PocketSVG Error: No <path> elements found");
-        exit(EXIT_FAILURE);
+        BEZIER_PATH_TYPE *bezier = [self bezierFromPathElement: strokeElement];
+        
+        [paths addObject: bezier];
     }
     
-    NSString *dString = [pathElement attribute: @"d"];
-    if (dString == nil)
-    {
-        NSLog(@"*** PocketSVG Error: No \"d\" attribute found");
-        exit(EXIT_FAILURE);
-    }
-
-    NSArray *dStringWithPossibleWhiteSpace = [dString componentsSeparatedByCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
-    
-    dString = [dStringWithPossibleWhiteSpace componentsJoinedByString:@""];
-    
-    //Uncomment the line below to print the raw path data of the SVG file:
-    //NSLog(@"*** PocketSVG: Path data of %@ is: %@", nameOfSVG, dString);
-    
-    return dString;
+    _beziers = [paths copy];
 }
 
+
+- (NSArray *) strokesFromXML: (RXMLElement *) root
+{
+    NSMutableArray *strokeElements = [NSMutableArray array];
+    
+    // find the <path> elements
+    [root iterate: @"*" usingBlock: ^(RXMLElement *element) {
+        
+        NSString *name = element.tag;
+        
+        if ([name isEqualToString: @"g"])
+        {
+            // if it's a group, recurse
+            NSArray *subElements = [self strokesFromXML: element];
+            
+            // add the group's elements to the array
+            [strokeElements addObjectsFromArray: subElements];
+        }
+        else 
+        {
+            // add the element to the array if it's a line drawing element
+            if ([name isEqualToString: @"path"])
+            {
+                NSString *name = element.tag;
+                NSLog(@"element name: %@", name);
+                
+                [strokeElements addObject: element];
+            }
+        }
+    }];
+    
+    return [strokeElements copy];
+}
 
 #pragma mark - Private methods
 
@@ -185,6 +204,15 @@ unichar   const invalidCommand      = '*';
 		start a new token
 	throw away empty token
 */
+
+- (BEZIER_PATH_TYPE *) bezierFromPathElement: (RXMLElement *) pathElement
+{
+    NSString *pathString = [pathElement attribute: @"d"];
+    NSArray *tokens = [self parsePath: pathString];
+    BEZIER_PATH_TYPE *bezier = [self generateBezier:tokens];
+    
+    return bezier;
+}
 
 - (NSMutableArray *)parsePath:(NSString *)attr
 {
@@ -254,14 +282,15 @@ unichar   const invalidCommand      = '*';
 
 - (BEZIER_PATH_TYPE *)generateBezier:(NSArray *)inTokens
 {
-	_bezier = [[BEZIER_PATH_TYPE alloc] init];
+    BEZIER_PATH_TYPE *bezier = [[BEZIER_PATH_TYPE alloc] init];
+    
 	[self reset];
 	for (Token *thisToken in inTokens) {
 		unichar command = [thisToken command];
 		switch (command) {
 			case 'M':
 			case 'm':
-				[self appendSVGMCommand:thisToken];
+				[self appendSVGMCommand:thisToken toBezier: bezier];
 				break;
 			case 'L':
 			case 'l':
@@ -269,26 +298,26 @@ unichar   const invalidCommand      = '*';
 			case 'h':
 			case 'V':
 			case 'v':
-				[self appendSVGLCommand:thisToken];
+				[self appendSVGLCommand:thisToken toBezier: bezier];
 				break;
 			case 'C':
 			case 'c':
-				[self appendSVGCCommand:thisToken];
+				[self appendSVGCCommand:thisToken toBezier: bezier];
 				break;
 			case 'S':
 			case 's':
-				[self appendSVGSCommand:thisToken];
+				[self appendSVGSCommand:thisToken toBezier: bezier];
 				break;
 			case 'Z':
 			case 'z':
-				[_bezier closePath];
+				[bezier closePath];
 				break;
 			default:
 				NSLog(@"*** PocketSVG Error: Cannot process command : '%c'", command);
 				break;
 		}
 	}
-	return _bezier;
+	return bezier;
 }
 
 - (void)reset
@@ -297,7 +326,10 @@ unichar   const invalidCommand      = '*';
 	_validLastControlPoint = NO;
 }
 
-- (void)appendSVGMCommand:(Token *)token
+
+#pragma mark - build bezier path from svg path commands
+
+- (void)appendSVGMCommand:(Token *)token toBezier: (BEZIER_PATH_TYPE *) bezier
 {
 	_validLastControlPoint = NO;
 	NSInteger index = 0;
@@ -311,21 +343,21 @@ unichar   const invalidCommand      = '*';
 		CGFloat y = [token parameter:index] + ([token command] == 'm' ? _lastPoint.y : 0);
 		_lastPoint = CGPointMake(x, y);
 		if (first) {
-			[_bezier moveToPoint:_lastPoint];
+			[bezier moveToPoint:_lastPoint];
 			first = NO;
 		}
 		else {
 #ifdef TARGET_OS_IPHONE
-			[_bezier addLineToPoint:_lastPoint];
+			[bezier addLineToPoint:_lastPoint];
 #else
-			[_bezier lineToPoint:NSPointFromCGPoint(_lastPoint)];
+			[bezier lineToPoint:NSPointFromCGPoint(_lastPoint)];
 #endif
 		}
 		index++;
 	}
 }
 
-- (void)appendSVGLCommand:(Token *)token
+- (void)appendSVGLCommand:(Token *)token toBezier: (BEZIER_PATH_TYPE *) bezier
 {
 	_validLastControlPoint = NO;
 	NSInteger index = 0;
@@ -362,15 +394,15 @@ unichar   const invalidCommand      = '*';
 		}
 		_lastPoint = CGPointMake(x, y);
 #ifdef TARGET_OS_IPHONE
-		[_bezier addLineToPoint:_lastPoint];
+		[bezier addLineToPoint:_lastPoint];
 #else
-		[_bezier lineToPoint:NSPointFromCGPoint(_lastPoint)];
+		[bezier lineToPoint:NSPointFromCGPoint(_lastPoint)];
 #endif
 		index++;
 	}
 }
 
-- (void)appendSVGCCommand:(Token *)token
+- (void)appendSVGCCommand:(Token *)token toBezier: (BEZIER_PATH_TYPE *) bezier
 {
 	NSInteger index = 0;
 	while ((index + 5) < [token valence]) {  // we must have 6 floats here (x1, y1, x2, y2, x, y).
@@ -382,11 +414,11 @@ unichar   const invalidCommand      = '*';
 		CGFloat y  = [token parameter:index++] + ([token command] == 'c' ? _lastPoint.y : 0);
 		_lastPoint = CGPointMake(x, y);
 #ifdef TARGET_OS_IPHONE
-		[_bezier addCurveToPoint:_lastPoint 
+		[bezier addCurveToPoint:_lastPoint 
 				  controlPoint1:CGPointMake(x1,y1) 
 				  controlPoint2:CGPointMake(x2, y2)];
 #else
-		[_bezier curveToPoint:NSPointFromCGPoint(_lastPoint)
+		[bezier curveToPoint:NSPointFromCGPoint(_lastPoint)
 			   controlPoint1:NSPointFromCGPoint(CGPointMake(x1,y1))
 			   controlPoint2:NSPointFromCGPoint(CGPointMake(x2, y2)];
 #endif
@@ -398,7 +430,7 @@ unichar   const invalidCommand      = '*';
 	}
 }
 
-- (void)appendSVGSCommand:(Token *)token
+- (void)appendSVGSCommand:(Token *)token toBezier: (BEZIER_PATH_TYPE *) bezier
 {
 	if (!_validLastControlPoint) {
 		NSLog(@"*** PocketSVG Error: Invalid last control point in S command");
@@ -413,11 +445,11 @@ unichar   const invalidCommand      = '*';
 		CGFloat y  = [token parameter:index++] + ([token command] == 's' ? _lastPoint.y : 0);
 		_lastPoint = CGPointMake(x, y);
 #ifdef TARGET_OS_IPHONE
-		[_bezier addCurveToPoint:_lastPoint 
+		[bezier addCurveToPoint:_lastPoint 
 				  controlPoint1:CGPointMake(x1,y1)
 				  controlPoint2:CGPointMake(x2, y2)];
 #else
-		[_bezier curveToPoint:NSPointFromCGPoint(_lastPoint)
+		[bezier curveToPoint:NSPointFromCGPoint(_lastPoint)
 			   controlPoint1:NSPointFromCGPoint(CGPointMake(x1,y1)) 
 			   controlPoint2:NSPointFromCGPoint(CGPointMake(x2, y2)];
 #endif
