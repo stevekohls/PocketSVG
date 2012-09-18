@@ -226,7 +226,25 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
     
     for (RXMLElement *strokeElement in strokeElements)
     {
-        BEZIER_PATH_TYPE *bezier = [self bezierFromPathElement: strokeElement];
+        BEZIER_PATH_TYPE *bezier;
+        NSString *name = strokeElement.tag;
+        if ([name isEqualToString: @"path"])
+        {
+            bezier = [self bezierFromPathElement: strokeElement];
+        }
+        else if ([name isEqualToString: @"line"])
+        {
+            bezier = [self bezierFromLineElement: strokeElement];
+        }
+        else if ([name isEqualToString: @"polyline"])
+        {
+            bezier = [self bezierFromPolylineElement: strokeElement];
+        }
+        else
+        {
+            NSLog(@"unexpected stroke type: %@", name);
+            exit(EXIT_FAILURE);
+        }
         
         [paths addObject: bezier];
     }
@@ -234,7 +252,7 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
     _beziers = [paths copy];
 }
 
-// get the <path> elements from the SVG, recursing through any <g> group elements
+// get the line drawing elements from the SVG, recursing through any <g> group elements
 - (NSArray *) strokesFromXML: (RXMLElement *) root
 {
     NSMutableArray *strokeElements = [NSMutableArray array];
@@ -255,7 +273,9 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
         else 
         {
             // add the element to the array if it's a line drawing element
-            if ([name isEqualToString: @"path"])
+            if ([name isEqualToString: @"path"] ||
+                [name isEqualToString: @"line"] ||
+                [name isEqualToString: @"polyline"])
             {
                 NSString *name = element.tag;
                 NSLog(@"element name: %@", name);
@@ -269,7 +289,92 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
 }
 
 
-#pragma mark - parse path and create a bezier curve
+#pragma mark - parse <line> element and create a bezier curve
+
+- (BEZIER_PATH_TYPE *) bezierFromLineElement: (RXMLElement *) lineElement
+{
+    NSString *x1String = [lineElement attribute: @"x1"];
+    NSString *y1String = [lineElement attribute: @"y1"];
+    NSString *x2String = [lineElement attribute: @"x2"];
+    NSString *y2String = [lineElement attribute: @"y2"];
+    
+    CGFloat x1 = [x1String floatValue];
+    CGFloat y1 = [y1String floatValue];
+    CGFloat x2 = [x2String floatValue];
+    CGFloat y2 = [y2String floatValue];
+    
+    CGPoint startPoint = CGPointMake(x1, y1);
+    CGPoint endPoint   = CGPointMake(x2, y2);
+    
+    BEZIER_PATH_TYPE *bezier = [[BEZIER_PATH_TYPE alloc] init];
+    
+#ifdef TARGET_OS_IPHONE
+    [bezier moveToPoint: startPoint];
+    [bezier addLineToPoint: endPoint];
+#else
+    [bezier moveToPoint: NSPointFromCGPoint(startPoint)];
+    [bezier lineToPoint: NSPointFromCGPoint(endPoint)];
+#endif
+    
+    return bezier;
+}
+
+
+#pragma mark - parse <polyline> element and create a bezier curve
+
+- (BEZIER_PATH_TYPE *) bezierFromPolylineElement: (RXMLElement *) polylineElement
+{
+    NSString *pointsAttribute = [polylineElement attribute: @"points"];
+    
+    NSArray *pairs = [pointsAttribute componentsSeparatedByCharactersInSet: [NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    
+    BEZIER_PATH_TYPE *bezier = [[BEZIER_PATH_TYPE alloc] init];
+    
+    BOOL firstPoint = YES;
+    
+    for (NSString *pair in pairs)
+    {
+        // skip empty strings - this happens when there is more than one separator in a row
+        if ([pair isEqualToString: @""]) {
+            continue;
+        }
+        
+        NSArray *coordinate = [pair componentsSeparatedByString: @","];
+        if ([coordinate count] != 2)
+        {
+            NSLog(@"expected an x and y coordinate pair");
+            exit(EXIT_FAILURE);
+        }
+        NSString *xString = [coordinate objectAtIndex: 0];
+        NSString *yString = [coordinate objectAtIndex: 1];
+        CGFloat x = [xString floatValue];
+        CGFloat y = [yString floatValue];
+        CGPoint point = CGPointMake(x, y);
+        
+        if (firstPoint)
+        {
+#ifdef TARGET_OS_IPHONE
+            [bezier moveToPoint: point];
+#else
+            [bezier moveToPoint: NSPointFromCGPoint(point)];
+#endif
+            firstPoint = NO;
+        }
+        else
+        {    
+#ifdef TARGET_OS_IPHONE
+            [bezier addLineToPoint: point];
+#else
+            [bezier lineToPoint: NSPointFromCGPoint(point)];
+#endif
+        }
+    }
+    
+    return bezier;
+}
+
+
+#pragma mark - parse <path> element and create a bezier curve
 
 // create a bezier path object from a <path> element
 - (BEZIER_PATH_TYPE *) bezierFromPathElement: (RXMLElement *) pathElement
