@@ -1,7 +1,17 @@
 # PocketSVG
 A library that converts Scalable Vector Graphics (SVG) data into CAShapeLayers and UIBezierCurves. This makes it easy to create vector-based paths and shapes in your apps. 
 
-This a fork of an [SVG to bezier path parser by Martin Haywood](http://ponderwell.net/2011/05/converting-svg-paths-to-objective-c-paths/), with fixes by [Pieter Omvlee](http://www.bohemiancoding.com/) and Dominic Mortlock.
+This a fork of a fork of an [SVG to bezier path parser by Martin Haywood](http://ponderwell.net/2011/05/converting-svg-paths-to-objective-c-paths/), with fixes by [Pieter Omvlee](http://www.bohemiancoding.com/) and Dominic Mortlock.
+Further improvements by Steve Kohls.
+
+This fork includes:
+* Support for SVG <line> and <polyline> elements.
+* Support for more than one <path>, <line> and <polyline> per file.
+* Designated initializers to support SVG input from a variety of sources.
+
+General improvements:
+* Added [RaptureXML](https://github.com/ZaBlanc/RaptureXML) to support easier SVG parsing.
+* Improved <path> parsing to be more robust.
 
 Feedback, improvements, and pull requests are welcome. Please get in touch if you can help improve the code. 
 
@@ -16,7 +26,7 @@ Feedback, improvements, and pull requests are welcome. Please get in touch if yo
     PocketSVG *myBezier = [[PocketSVG alloc] initFromSVGFileNamed:@"BezierCurve1-iPad"];
     
     //2: Its bezier property is the corresponding UIBezierPath:
-    UIBezierPath *myPath = myBezier.bezier;
+    UIBezierPath *myPath = [myBezier.beziers objectAtIndex:0];
     
     //3: To display it on screen, create a CAShapeLayer and set 
     //the CGPath property of the above UIBezierPath as its path:
