@@ -5,13 +5,13 @@ This a fork of a fork of an [SVG to bezier path parser by Martin Haywood](http:/
 Further improvements by Steve Kohls.
 
 This fork includes:
-* Support for SVG <line> and <polyline> elements.
-* Support for more than one <path>, <line> and <polyline> per file.
+* Support for SVG \<line\> and \<polyline\> elements.
+* Support for more than one \<path\>, \<line\> and \<polyline\> per file.
 * Designated initializers to support SVG input from a variety of sources.
 
 General improvements:
 * Added [RaptureXML](https://github.com/ZaBlanc/RaptureXML) to support easier SVG parsing.
-* Improved <path> parsing to be more robust.
+* Improved \<path\> parsing to be more robust.
 
 Feedback, improvements, and pull requests are welcome. Please get in touch if you can help improve the code. 
 
