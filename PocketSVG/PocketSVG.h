@@ -25,5 +25,9 @@ typedef NSBezierPath BEZIER_PATH_TYPE;
 @property (nonatomic, readonly) NSArray *beziers;
 
 - (id) initFromSVGFile: (NSString *) filename;
+- (id) initFromSVGFilename: (NSString *) filename fileExtension: (NSString *) fileExtension;
+- (id) initFromSVGXML: (RXMLElement *) rootXML;
+- (id) initFromSVGData: (NSData *) data;
+- (id) initFromSVGString: (NSString *) svgString;
 
 @end

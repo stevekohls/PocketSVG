@@ -74,7 +74,8 @@
 
 - (void)reset;
 
-- (void) parseSVGFile: (NSString *) filename;
+- (void) parseSVG: (RXMLElement *) rootXML;
+
 - (NSArray *) strokesFromXML: (RXMLElement *) root;
 - (BEZIER_PATH_TYPE *) bezierFromPathElement: (RXMLElement *) pathElement;
 - (NSMutableArray *)parsePath:(NSString *)attr;
@@ -99,7 +100,7 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
 @synthesize beziers = _beziers;
 
 
-#pragma mark - initialization
+#pragma mark - designated initializers
 
 - (id) initFromSVGFile: (NSString *) filename
 {
@@ -109,10 +110,72 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
 		_commandSet = [NSCharacterSet characterSetWithCharactersInString:kCommandCharString];
         [self reset];
         
-        [self parseSVGFile: filename];
+        RXMLElement *rootXML = [RXMLElement elementFromXMLFilename: filename fileExtension: @"svg"];
+
+        [self parseSVG: rootXML];
     }
     return self;
 }
+
+- (id) initFromSVGFilename: (NSString *) filename fileExtension: (NSString *) fileExtension
+{
+    self = [super init];
+    if (self)
+    {
+		_commandSet = [NSCharacterSet characterSetWithCharactersInString:kCommandCharString];
+        [self reset];
+        
+        RXMLElement *rootXML = [RXMLElement elementFromXMLFilename: filename fileExtension: fileExtension];
+        
+        [self parseSVG: rootXML];
+    }
+    return self;
+}
+
+- (id) initFromSVGXML: (RXMLElement *) rootXML
+{
+    self = [super init];
+    if (self)
+    {
+		_commandSet = [NSCharacterSet characterSetWithCharactersInString:kCommandCharString];
+        [self reset];
+        
+        [self parseSVG: rootXML];
+    }
+    return self;
+}
+
+- (id) initFromSVGData: (NSData *) data
+{
+    self = [super init];
+    if (self)
+    {
+		_commandSet = [NSCharacterSet characterSetWithCharactersInString:kCommandCharString];
+        [self reset];
+        
+        RXMLElement *rootXML = [RXMLElement elementFromXMLData: data];
+        
+        [self parseSVG: rootXML];
+    }
+    return self;
+}
+
+- (id) initFromSVGString: (NSString *) svgString
+{
+    self = [super init];
+    if (self)
+    {
+		_commandSet = [NSCharacterSet characterSetWithCharactersInString:kCommandCharString];
+        [self reset];
+        
+        // we're making an assumption here about string encoding
+        RXMLElement *rootXML = [RXMLElement elementFromXMLString: svgString encoding: NSUTF8StringEncoding];
+        
+        [self parseSVG: rootXML];
+    }
+    return self;
+}
+
 
 // get ready to parse another path
 - (void) reset
@@ -125,10 +188,8 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
 #pragma mark - parsing
 
 // parse the SVG file into a Bezier curve
-- (void) parseSVGFile: (NSString *) filename
+- (void) parseSVG: (RXMLElement *) rootXML
 {    
-    RXMLElement *rootXML = [RXMLElement elementFromXMLFilename: filename fileExtension: @"svg"];
-
     if (rootXML == nil)
     {
         NSLog(@"*** PocketSVG Error: Root element nil");
