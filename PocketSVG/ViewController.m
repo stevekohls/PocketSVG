@@ -18,31 +18,27 @@
     [super viewDidLoad];
         
     //1: Create a PocketSVG object from your SVG file:
-    PocketSVG *myBezier = [[PocketSVG alloc] initFromSVGFile:@"BezierCurve1-iPad"];
+    PocketSVG *myBezier = [[PocketSVG alloc] initFromSVGFile:@"BezierCurve4-iPad"];
     
-    
-    //2: Its bezier property is the corresponding UIBezierPath:
+    //2: Iterate over the bezier paths
     NSArray *beziers = myBezier.beziers;
-    UIBezierPath *myPath = [beziers objectAtIndex: 0];
-    
-    
-    //3: To display it on screen, create a CAShapeLayer and set 
-    //the CGPath property of the above UIBezierPath as its 
-    //path. 
-    CAShapeLayer *myShapeLayer = [CAShapeLayer layer];
-    myShapeLayer.path = myPath.CGPath;
-    
-    
-    //4: Fiddle with it using CAShapeLayer's properties:
-    myShapeLayer.strokeColor = [[UIColor redColor] CGColor];
-    myShapeLayer.lineWidth = 4;
-    myShapeLayer.fillColor = [[UIColor clearColor] CGColor];
-    
-    
-    //5: Display it!
-    [self.view.layer addSublayer:myShapeLayer];
-    
-    
+
+    for (UIBezierPath *myPath in beziers)
+    {
+        //3: To display it on screen, create a CAShapeLayer and set 
+        //the CGPath property of the above UIBezierPath as its 
+        //path. 
+        CAShapeLayer *myShapeLayer = [CAShapeLayer layer];
+        myShapeLayer.path = myPath.CGPath;
+
+        //4: Fiddle with it using CAShapeLayer's properties:
+        myShapeLayer.strokeColor = [[UIColor redColor] CGColor];
+        myShapeLayer.lineWidth = 4;
+        myShapeLayer.fillColor = [[UIColor clearColor] CGColor];
+
+        //5: Display it!
+        [self.view.layer addSublayer:myShapeLayer];
+    }
 }
 
 - (void)viewDidUnload
