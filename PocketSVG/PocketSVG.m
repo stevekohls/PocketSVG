@@ -68,7 +68,6 @@
     CGPoint        _lastPoint;
     CGPoint        _lastControlPoint;
     BOOL           _validLastControlPoint;
-    NSCharacterSet *_separatorSet;
     NSCharacterSet *_commandSet;
     NSMutableArray *_tokens;
 }
@@ -174,7 +173,7 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
     _beziers = [paths copy];
 }
 
-
+// get the <path> elements from the SVG, recursing through any <g> group elements
 - (NSArray *) strokesFromXML: (RXMLElement *) root
 {
     NSMutableArray *strokeElements = [NSMutableArray array];
@@ -211,19 +210,28 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
 
 #pragma mark - parse path and create a bezier curve
 
+// create a bezier path object from a <path> element
 - (BEZIER_PATH_TYPE *) bezierFromPathElement: (RXMLElement *) pathElement
 {
+    // get the <path> 'd' attribute
     NSString *pathString = [pathElement attribute: @"d"];
+    
+    // parse them into an array of Token objects
+    // one Token for each path command
     NSArray *tokens = [self parsePath: pathString];
+    
+    // build a bezier path from the Tokens
     BEZIER_PATH_TYPE *bezier = [self generateBezierFromTokens: tokens];
     
     return bezier;
 }
 
+// parse the <path> 'd' attribute
 - (NSMutableArray *)parsePath:(NSString *)attr
 {
     NSLog(@"attributes: %@", attr);
     
+    // *** first, clean up the 'd' attribute ***
     // replace all non-space whitespace and commas with space
     NSError *error = NULL;
     NSRegularExpression *regex = [NSRegularExpression regularExpressionWithPattern: @"([\t\r\n\f,])" 
@@ -243,6 +251,7 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
                                                      range: NSMakeRange(0, [attr length])
                                               withTemplate: @"$1 -"];
     
+    // *** next, match the commands and each command's parameters ***
     // match command followed by numbers and spaces
     NSRegularExpression *stringTokenRegex = [NSRegularExpression regularExpressionWithPattern: @"([A-Za-z][0-9-. ]+)"
                                                                                       options: NSRegularExpressionCaseInsensitive 
@@ -252,11 +261,11 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
                                                    range: NSMakeRange(0, [newAttr length])];
     
 	if ([matches count] == 0) {
-		NSLog(@"*** PocketSVG Error: Path string is empty of tokens");
+		NSLog(@"*** PocketSVG Error: No valid path commands found in the \'d\' attribute");
 		exit(EXIT_FAILURE);
 	}
     
-    // get the matching strings
+    // get the matching command strings
     NSMutableArray *stringTokens = [NSMutableArray arrayWithCapacity: [matches count]];
     for (NSTextCheckingResult *match in matches) {
         NSString *result = [newAttr substringWithRange: match.range];
@@ -269,19 +278,21 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
         NSLog(@"%@", string);
     }
 
-	// turn the stringTokens array into Tokens, checking validity of tokens as we go
+	// turn the command strings into Tokens, checking validity of the commands as we go
 	NSMutableArray *tokens = [[NSMutableArray alloc] init];
     
     for (NSString *stringToken in stringTokens)
     {
         NSLog(@"parsing: %@", stringToken);
         
+        // get the command
         unichar command = [stringToken characterAtIndex:0];
 		if (![_commandSet characterIsMember:command]) {
 			NSLog(@"*** PocketSVG Error: unexpected command %c", command);
             exit(EXIT_FAILURE);
 		}
         
+        // get the parameters
         NSString *parameterString = [stringToken substringFromIndex: 1];
         NSArray *parameters = [parameterString componentsSeparatedByString: @" "];
         
@@ -290,10 +301,13 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
             exit(EXIT_FAILURE);
         }
         
+        // create the Token object
         Token *token = [[Token alloc] initWithCommand:command];
         
         NSLog(@"command: %c", command);
         
+        // parse the parameters
+        // should be a series of floats
         for (NSString *parameterString in parameters)
         {
             // skip if there was more than one space in a row
@@ -310,21 +324,25 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
             
             NSLog(@"parameter: %f", value);
             
+            // save the parameter in the Token
 			[token addValue:value];
         }
-        
-		// now we've reached a command or the end of the stringTokens array
+
 		[tokens	addObject:token];
     }
     
 	return [tokens copy];
 }
 
+// build a bezier path from the Tokens
 - (BEZIER_PATH_TYPE *) generateBezierFromTokens: (NSArray *) tokens
 {
     BEZIER_PATH_TYPE *bezier = [[BEZIER_PATH_TYPE alloc] init];
     
+    // reset the path parsing variables
 	[self reset];
+    
+    // parse the commands from each Token
 	for (Token *thisToken in tokens) {
 		unichar command = [thisToken command];
 		switch (command) {
