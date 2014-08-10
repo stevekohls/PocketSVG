@@ -78,7 +78,7 @@
 
 - (NSArray *) strokesFromXML: (RXMLElement *) root;
 - (BEZIER_PATH_TYPE *) bezierFromPathElement: (RXMLElement *) pathElement;
-- (NSMutableArray *)parsePath:(NSString *)attr;
+- (NSArray *)parsePath:(NSString *)attr;
 - (BEZIER_PATH_TYPE *) generateBezierFromTokens: (NSArray *) tokens;
 
 - (void)appendSVGMCommand:(Token *)token toBezier: (BEZIER_PATH_TYPE *) bezier;
@@ -188,17 +188,19 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
 #pragma mark - parsing
 
 // parse the SVG file into a Bezier curve
+// If there are errors parsing the root element, don't create any Bezier paths.
+// If the stroke type is not supported, skip that stroke.
 - (void) parseSVG: (RXMLElement *) rootXML
 {    
     if (rootXML == nil)
     {
         NSLog(@"*** PocketSVG Error: Root element nil");
-        exit(EXIT_FAILURE);
+        return;
     }
     if (![rootXML.tag isEqualToString: @"svg"])
     {
         NSLog(@"*** PocketSVG Error: Root element not equal to \"svg\", instead %@:", rootXML.tag);
-        exit(EXIT_FAILURE);
+        return;
     }
 
     // get the width and height
@@ -207,12 +209,12 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
     if (widthString == nil)
     {
         NSLog(@"width empty");
-        exit(EXIT_FAILURE);
-    }    
+        return;
+    }
     if (heightString == nil)
     {
         NSLog(@"height empty");
-        exit(EXIT_FAILURE);
+        return;
     }
     
     _width = [widthString floatValue];
@@ -242,11 +244,14 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
         }
         else
         {
-            NSLog(@"unexpected stroke type: %@", name);
-            exit(EXIT_FAILURE);
+            NSLog(@"skipping unsupported stroke type: %@", name);
+            continue;
         }
         
-        [paths addObject: bezier];
+        if (bezier)
+        {
+            [paths addObject: bezier];
+        }
     }
     
     _beziers = [paths copy];
@@ -342,8 +347,10 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
         NSArray *coordinate = [pair componentsSeparatedByString: @","];
         if ([coordinate count] != 2)
         {
+            // no x,y coordinate pair. return nil
             NSLog(@"expected an x and y coordinate pair");
-            exit(EXIT_FAILURE);
+            bezier = nil;
+            break;
         }
         NSString *xString = [coordinate objectAtIndex: 0];
         NSString *yString = [coordinate objectAtIndex: 1];
@@ -385,7 +392,13 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
     // parse them into an array of Token objects
     // one Token for each path command
     NSArray *tokens = [self parsePath: pathString];
-    
+
+    // if no valid tokens, return nil
+    if (!tokens || ([tokens count] == 0))
+    {
+        return nil;
+    }
+
     // build a bezier path from the Tokens
     BEZIER_PATH_TYPE *bezier = [self generateBezierFromTokens: tokens];
     
@@ -393,7 +406,9 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
 }
 
 // parse the <path> 'd' attribute
-- (NSMutableArray *)parsePath:(NSString *)attr
+// return an array of valid path Tokens
+// return nil if there is an error parsing the path
+- (NSArray *)parsePath:(NSString *)attr
 {
     NSLog(@"attributes: %@", attr);
     
@@ -426,9 +441,10 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
                                                  options: 0
                                                    range: NSMakeRange(0, [newAttr length])];
     
+    // if no valid path commands, return an empty array
 	if ([matches count] == 0) {
 		NSLog(@"*** PocketSVG Error: No valid path commands found in the \'d\' attribute");
-		exit(EXIT_FAILURE);
+		return nil;
 	}
     
     // get the matching command strings
@@ -455,7 +471,7 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
         unichar command = [stringToken characterAtIndex:0];
 		if (![_commandSet characterIsMember:command]) {
 			NSLog(@"*** PocketSVG Error: unexpected command %c", command);
-            exit(EXIT_FAILURE);
+            return nil;
 		}
         
         // get the parameters
@@ -464,7 +480,7 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
         
         if ([parameters count] == 0) {
             NSLog(@"*** PocketSVG Error: no parameters for command %c", command);
-            exit(EXIT_FAILURE);
+            return nil;
         }
         
         // create the Token object
@@ -485,7 +501,7 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
 			float value;
 			if (![floatScanner scanFloat:&value]) {
 				NSLog(@"*** PocketSVG Error: Path string parse error: expected float (but found %@).", parameterString);
-                exit(EXIT_FAILURE);
+                return nil;
 			}
             
             NSLog(@"parameter: %f", value);
@@ -538,6 +554,7 @@ NSString* const kCommandCharString = @"CcMmLlHhVvZzqQaAsS";
 				break;
 			default:
 				NSLog(@"*** PocketSVG Error: Cannot process command : '%c'", command);
+                return nil;
 				break;
 		}
 	}
